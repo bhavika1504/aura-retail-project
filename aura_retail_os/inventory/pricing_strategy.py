@@ -13,8 +13,10 @@ class PricingStrategy(ABC):
     
     @abstractmethod
     def calculate_price(self, base_price: float, context: PricingContext) -> float:
+        pass
        
 
     @abstractmethod
     def get_name(self) -> str:
+        pass
 
