@@ -13,7 +13,6 @@ bus = EventBus()
 
 bus.subscribe(ModeChangedEvent,
     lambda e: print(f"[City Monitor] Mode changed: {e.old_mode} → {e.new_mode}"))
-
 bus.subscribe(EmergencyModeActivated,
     lambda e: print(f"[City Monitor] EMERGENCY on kiosk {e.kiosk_id}"))
 bus.publish(ModeChangedEvent(
