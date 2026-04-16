@@ -71,7 +71,7 @@ class PowerSavingState(KioskState):
     """
 
     def handle_purchase(self, manager, product_id, qty) -> bool:
-        print("[PowerSavingState] ⚡ Purchase request — waking to ACTIVE mode.")
+        print("[PowerSavingState] Purchase request — waking to ACTIVE mode.")
         manager.set_state(ActiveState())
         return True   # allow after wake
 
@@ -98,11 +98,11 @@ class MaintenanceState(KioskState):
     """
 
     def handle_purchase(self, manager, product_id, qty) -> bool:
-        print("[MaintenanceState] ❌ Kiosk under maintenance — purchases suspended.")
+        print("[MaintenanceState] Kiosk under maintenance — purchases suspended.")
         return False
 
     def handle_restock(self, manager) -> bool:
-        print("[MaintenanceState] ✅ Restock approved during maintenance window.")
+        print("[MaintenanceState] Restock approved during maintenance window.")
         return True
 
     def handle_diagnostics(self, manager) -> Dict[str, Any]:
@@ -134,18 +134,18 @@ class EmergencyState(KioskState):
     def handle_purchase(self, manager, product_id, qty) -> bool:
         if qty > self.EMERGENCY_LIMIT:
             print(
-                f"[EmergencyState] ❌ Purchase of {qty} units denied. "
+                f"[EmergencyState] Purchase of {qty} units denied. "
                 f"Emergency limit is {self.EMERGENCY_LIMIT} per transaction."
             )
             return False
         print(
-            f"[EmergencyState] ⚠️  Emergency purchase approved "
+            f"[EmergencyState] Emergency purchase approved "
             f"({qty}/{self.EMERGENCY_LIMIT} units)."
         )
         return True
 
     def handle_restock(self, manager) -> bool:
-        print("[EmergencyState] ✅ Emergency restock approved.")
+        print("[EmergencyState] Emergency restock approved.")
         return True
 
     def handle_diagnostics(self, manager) -> Dict[str, Any]:
