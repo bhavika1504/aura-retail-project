@@ -1,3 +1,0 @@
-# Aura Retail OS — no external dependencies
-# Python 3.8+ standard library only
-# dataclasses, abc, uuid, json, csv, os, datetime, random
