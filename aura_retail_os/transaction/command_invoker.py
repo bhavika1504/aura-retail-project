@@ -1,5 +1,5 @@
 # =============================================================
-# transaction/command_invoker.py  — Kajal Varlani (202512017)
+
 # PATTERN: Command (Invoker)
 #
 # The invoker knows nothing about what a command does.

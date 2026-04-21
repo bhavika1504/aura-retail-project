@@ -1,5 +1,5 @@
 # =============================================================
-# transaction/command.py  — Kajal Varlani (202512017)
+
 # PATTERN: Command (abstract interface)
 #
 # Encapsulates every kiosk operation as an object so that:

@@ -1,5 +1,5 @@
 # =============================================================
-# transaction/transaction_memento.py  — Kajal Varlani (202512017)
+
 # PATTERN: Memento
 #
 # Before dispensing a product, PurchaseCommand takes a snapshot

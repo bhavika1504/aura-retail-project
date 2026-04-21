@@ -1,5 +1,5 @@
 # =============================================================
-# transaction/commands.py  — Kajal Varlani (202512017)
+
 # PATTERN: Command (concrete commands)
 #
 # PurchaseCommand — full atomic purchase with Memento rollback
