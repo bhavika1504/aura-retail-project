@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import Any, Dict, TYPE_CHECKING
 
 from transaction.commands import PurchaseCommand, RefundCommand, RestockCommand
+from transaction.command_decorators import LoggingDecorator, TimingDecorator, ValidationDecorator
 
 if TYPE_CHECKING:
     from core.aura_kiosk import AuraKiosk
@@ -64,7 +65,7 @@ class KioskInterface:
         if not self._kiosk.validate_purchase(product_id, qty, user_id):
             return False
 
-        cmd = PurchaseCommand(
+        raw_cmd = PurchaseCommand(
             kiosk_id=self._kiosk.kiosk_id,
             product_id=product_id,
             quantity=qty,
@@ -74,6 +75,12 @@ class KioskInterface:
             context=self._kiosk.mode_manager.get_pricing_context(product_category),
             caretaker=self._kiosk.caretaker,
         )
+        # PATTERN: Decorator — wrap PurchaseCommand with cross-cutting concerns.
+        # TimingDecorator(LoggingDecorator(raw_cmd)):
+        #   outer: measures wall-clock time
+        #   inner: logs PRE/POST execution
+        #   core:  the real PurchaseCommand (unmodified)
+        cmd = TimingDecorator(LoggingDecorator(raw_cmd))
         return self._kiosk.invoker.execute(cmd)
 
     def refund_transaction(
@@ -88,7 +95,7 @@ class KioskInterface:
         Refunds payment and restores inventory.
         """
         print(f"\n[KioskInterface] REFUND  txn={transaction_id}  ₹{amount:.2f}")
-        cmd = RefundCommand(
+        raw_cmd = RefundCommand(
             kiosk_id=self._kiosk.kiosk_id,
             transaction_id=transaction_id,
             amount=amount,
@@ -97,6 +104,8 @@ class KioskInterface:
             inventory=self._kiosk.inventory,
             hardware_manager=self._kiosk.hardware,
         )
+        # PATTERN: Decorator — add logging to RefundCommand transparently.
+        cmd = LoggingDecorator(raw_cmd)
         return self._kiosk.invoker.execute(cmd)
 
     def restock_inventory(self, product_id: str, qty: int) -> bool:
@@ -107,11 +116,13 @@ class KioskInterface:
         print(f"\n[KioskInterface] RESTOCK  product={product_id}  qty={qty}")
         if not self._kiosk.mode_manager.handle_restock():
             return False
-        cmd = RestockCommand(
+        raw_cmd = RestockCommand(
             product_id=product_id,
             quantity=qty,
             inventory=self._kiosk.inventory,
         )
+        # PATTERN: Decorator — add logging to RestockCommand transparently.
+        cmd = LoggingDecorator(raw_cmd)
         return self._kiosk.invoker.execute(cmd)
 
     def run_diagnostics(self) -> Dict[str, Any]:
