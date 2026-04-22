@@ -55,7 +55,10 @@ class KioskInterface:
             f"product={product_id}  qty={qty}  user={user_id}"
         )
 
-        if not self._kiosk.mode_manager.handle_purchase(product_id, qty):
+        product = self._kiosk.inventory.get_product(product_id)
+        product_category = product.category if product else "general"
+
+        if not self._kiosk.mode_manager.handle_purchase(product_id, qty, product_category):
             return False
 
         if not self._kiosk.validate_purchase(product_id, qty, user_id):
@@ -68,7 +71,7 @@ class KioskInterface:
             inventory=self._kiosk.inventory,
             hardware_manager=self._kiosk.hardware,
             pricing_strategy=self._kiosk.mode_manager.get_pricing_strategy(),
-            context=self._kiosk.mode_manager.get_pricing_context(),
+            context=self._kiosk.mode_manager.get_pricing_context(product_category),
             caretaker=self._kiosk.caretaker,
         )
         return self._kiosk.invoker.execute(cmd)
@@ -154,7 +157,7 @@ class KioskInterface:
             return {"error": f"Product '{product_id}' not found."}
 
         available = self._kiosk.inventory.get_available_stock(product_id)
-        ctx       = self._kiosk.mode_manager.get_pricing_context()
+        ctx       = self._kiosk.mode_manager.get_pricing_context(product.category)
         strategy  = self._kiosk.mode_manager.get_pricing_strategy()
         live_price = strategy.calculate_price(product.base_price, ctx)
 

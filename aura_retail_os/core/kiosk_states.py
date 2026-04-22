@@ -27,7 +27,7 @@ class KioskState(ABC):
 
     @abstractmethod
     def handle_purchase(
-        self, manager: "KioskModeManager", product_id: str, qty: int
+        self, manager: "KioskModeManager", product_id: str, qty: int, category: str = ""
     ) -> bool: ...
 
     @abstractmethod
@@ -47,7 +47,7 @@ class ActiveState(KioskState):
     All operations are permitted.
     """
 
-    def handle_purchase(self, manager, product_id, qty) -> bool:
+    def handle_purchase(self, manager, product_id, qty, category="") -> bool:
         return True   # no restrictions
 
     def handle_restock(self, manager) -> bool:
@@ -70,7 +70,7 @@ class PowerSavingState(KioskState):
     A purchase request automatically wakes the kiosk to ACTIVE.
     """
 
-    def handle_purchase(self, manager, product_id, qty) -> bool:
+    def handle_purchase(self, manager, product_id, qty, category="") -> bool:
         print("[PowerSavingState] Purchase request — waking to ACTIVE mode.")
         manager.set_state(ActiveState())
         return True   # allow after wake
@@ -97,7 +97,7 @@ class MaintenanceState(KioskState):
     Purchases are blocked; restocking is allowed.
     """
 
-    def handle_purchase(self, manager, product_id, qty) -> bool:
+    def handle_purchase(self, manager, product_id, qty, category="") -> bool:
         print("[MaintenanceState] Kiosk under maintenance — purchases suspended.")
         return False
 
@@ -131,17 +131,21 @@ class EmergencyState(KioskState):
 
     EMERGENCY_LIMIT: int = 2
 
-    def handle_purchase(self, manager, product_id, qty) -> bool:
-        if qty > self.EMERGENCY_LIMIT:
+    def handle_purchase(self, manager, product_id, qty, category="") -> bool:
+        if category == "essential" and qty > self.EMERGENCY_LIMIT:
             print(
                 f"[EmergencyState] Purchase of {qty} units denied. "
-                f"Emergency limit is {self.EMERGENCY_LIMIT} per transaction."
+                f"Emergency limit is {self.EMERGENCY_LIMIT} per transaction for essential items."
             )
             return False
-        print(
-            f"[EmergencyState] Emergency purchase approved "
-            f"({qty}/{self.EMERGENCY_LIMIT} units)."
-        )
+        
+        if category == "essential":
+            print(
+                f"[EmergencyState] Emergency purchase approved "
+                f"({qty}/{self.EMERGENCY_LIMIT} units)."
+            )
+        else:
+            print(f"[EmergencyState] Emergency purchase approved ({qty} non-essential units).")
         return True
 
     def handle_restock(self, manager) -> bool:

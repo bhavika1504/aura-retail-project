@@ -1,4 +1,4 @@
-from inventory.pricing_strategy import PricingStrategy, PricingContext
+from .pricing_strategy import PricingStrategy, PricingContext
 
 class StandardPricing(PricingStrategy):
    
@@ -32,7 +32,11 @@ class EmergencyPricing(PricingStrategy):
 
     def calculate_price(self, base_price: float, context: PricingContext) -> float:
        
-        multiplier = self._ESSENTIAL_MULTIPLIER  
+        if context.product_category == "essential":
+            multiplier = self._ESSENTIAL_MULTIPLIER
+        else:
+            multiplier = self._NON_ESSENTIAL_MULTIPLIER
+            
         return round(base_price * multiplier, 2)
 
     def get_name(self) -> str:

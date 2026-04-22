@@ -65,7 +65,7 @@ class KioskModeManager:
                 kiosk_id=self._kiosk_id,
                 reason="System entered emergency lockdown.",
             ))
-        elif old_name == "EMERGENCY" and new_name == "ACTIVE":
+        elif old_name == "EMERGENCY" and new_name != "EMERGENCY":
             # Restore standard pricing when leaving emergency
             self._pricing = StandardPricing()
             print(f"[ModeManager:{self._kiosk_id}] Pricing restored to StandardPricing.")
@@ -74,8 +74,8 @@ class KioskModeManager:
         return self._state.get_mode_name()
 
     # Delegated state behaviours
-    def handle_purchase(self, product_id: str, qty: int) -> bool:
-        return self._state.handle_purchase(self, product_id, qty)
+    def handle_purchase(self, product_id: str, qty: int, category: str = "") -> bool:
+        return self._state.handle_purchase(self, product_id, qty, category)
 
     def handle_restock(self) -> bool:
         return self._state.handle_restock(self)
@@ -92,5 +92,5 @@ class KioskModeManager:
     def get_pricing_strategy(self) -> PricingStrategy:
         return self._pricing
 
-    def get_pricing_context(self) -> PricingContext:
-        return PricingContext(mode=self.get_current_mode().lower())
+    def get_pricing_context(self, product_category: str = "general") -> PricingContext:
+        return PricingContext(mode=self.get_current_mode().lower(), product_category=product_category)

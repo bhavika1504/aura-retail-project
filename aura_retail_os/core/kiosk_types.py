@@ -30,6 +30,9 @@ class PharmacyKiosk(AuraKiosk):
             return False
 
         if product.category in self.CONTROLLED_CATEGORIES:
+            if user_id == "ANON":  
+                print(f"[PharmacyKiosk] Rejecting unverified user '{user_id}' for controlled substance: '{product.name}'.")
+                return False
             print(
                 f"[PharmacyKiosk]  Controlled substance detected: '{product.name}'. "
                 f"Verifying prescription for user '{user_id}'…  Approved."
@@ -67,8 +70,6 @@ class FoodKiosk(AuraKiosk):
                     f"[FoodKiosk]  '{product.name}' requires refrigeration but "
                     f"the module is offline. Marking product unavailable."
                 )
-                # Mark these units as hw_faulted so derived stock = 0
-                self._inventory.mark_hw_faulted(product_id, product.quantity)
                 return False
 
         return True
