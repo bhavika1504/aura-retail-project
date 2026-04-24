@@ -27,7 +27,7 @@ const KSTATES={
   maintenance:{key:'maintenance',label:'Maintenance',emoji:'🔧',cls:'m-s',clst:'m-s-t',btnCls:'to-m',
     canBuy:()=>false,desc:'Purchases suspended, restock allowed.',color:'var(--warn)'},
   emergency:{key:'emergency',label:'Emergency',emoji:'🚨',cls:'e-s',clst:'e-s-t',btnCls:'to-e',
-    canBuy:(q,c)=>c!=='essential'||q<=2,desc:'Essential items capped at 2 units/txn.',color:'var(--wine)'},
+    canBuy:(q,c)=>q<=2,desc:'All items capped at 2 units/txn.',color:'var(--wine)'},
   power_saving:{key:'power_saving',label:'Power Saving',emoji:'🌙',cls:'p-s',clst:'p-s-t',btnCls:'to-p',
     canBuy:(q,c)=>true,desc:'Low-power standby, auto-wakes.',color:'var(--blue-d)'},
 };
@@ -128,7 +128,7 @@ function WelcomeSplash({onEnter}){
           <div className="splash-title">AURA OS</div>
           <div className="splash-sub">Retail Kiosk Intelligence System</div>
           <div className="splash-sub" style={{marginTop:6,fontSize:'.78rem',color:'rgba(255,255,255,.65)'}}>
-            OOP Design Patterns Showcase
+            Central Management Console
           </div>
           <div className="splash-heart">❤️</div>
         </div>
@@ -150,7 +150,7 @@ function WelcomeSplash({onEnter}){
           </div>
 
           <div style={{textAlign:'center',fontSize:'.67rem',color:'var(--t3)',marginBottom:18,fontFamily:'var(--mono)',letterSpacing:'1px'}}>
-            IT620 · Object-Oriented Programming · 2025
+            Enterprise Retail System · 2025
           </div>
 
           <button className="splash-enter-btn" onClick={enter}>
@@ -168,9 +168,10 @@ const NAV=[
   {id:'dash',label:'Dashboard',  icon:'📊',sec:'MONITOR'},
   {id:'txn', label:'Transactions',icon:'⚡',sec:'OPERATE'},
   {id:'inv', label:'Inventory',  icon:'📦',sec:'OPERATE'},
+  {id:'kiosk',label:'Kiosk Screen',  icon:'📱',sec:'OPERATE'},
   {id:'hw',  label:'Hardware',   icon:'⛓️',sec:'OPERATE'},
-  {id:'pat', label:'Patterns',   icon:'🏛️',sec:'SYSTEM'},
 ];
+
 
 // ════════════════════════════════════════════════
 // ROOT APP
@@ -201,6 +202,34 @@ function App(){
   const[decLog,setDecLog]=useState([]);
   const[decActive,setDecActive]=useState(null); // which wrapper is lit
   const[lastMs,setLastMs]=useState(null);
+
+  // ── DUMMY OPERATION: Automated Walkthrough ──────
+  const[demoStep,setDemoStep]=useState(null);
+  
+  const runDummyDemo=useCallback(async()=>{
+    if(page!=='kiosk') setPage('kiosk');
+    
+    const steps=[
+      {t:'USER INTERACTION', msg:'Customer selects Paracetamol (Essential)...', wait:1500},
+      {t:'SYSTEM CHECK',     msg:'Validating kiosk operational mode... ACTIVE.', wait:1800},
+      {t:'PRICING ENGINE',   msg:'Applying active pricing policy for category...', wait:1800},
+      {t:'SECURITY',         msg:'Validating purchase constraints...', wait:2000},
+      {t:'SYSTEM BACKUP',    msg:'Creating recovery snapshot before commit...', wait:1800},
+      {t:'HARDWARE OP',      msg:'Authorizing payment and dispensing item...', wait:2000},
+      {t:'NETWORK',          msg:'Syncing data with central dashboard...', wait:1500},
+    ];
+
+    for(const s of steps){
+      setDemoStep(s);
+      if(s.t==='HARDWARE OP'){
+        // Trigger the actual purchase logic
+        doTxn('purchase',{pid:'MED001',qty:1,amount:25,cat:'essential'});
+      }
+      await new Promise(r=>setTimeout(r,s.wait));
+    }
+    setDemoStep({t:'TRANSACTION COMPLETE', msg:'Thank you! Live stock and revenue updated.'});
+    setTimeout(()=>setDemoStep(null),4000);
+  },[page, doTxn]);
 
   // Simulate decorator chain animation for any command type
   const runDecChain=useCallback(async(cmdName,cat='purchase',cb)=>{
@@ -274,7 +303,7 @@ function App(){
     if(type==='purchase'){
       const{pid,qty,amount,cat}=data;
       if(!mode.canBuy(qty,cat)){
-        toast('error','Purchase Denied',mode.key==='maintenance'?'Kiosk under maintenance.':'Emergency: max 2 essential units/txn.');
+        toast('error','Purchase Denied',mode.key==='maintenance'?'Kiosk under maintenance.':'Emergency: max 2 units/txn.');
         addEvt('rb','PurchaseDenied',`${qty}× ${pid} denied by ${mode.label} State handler.`);
         return;
       }
@@ -359,7 +388,7 @@ function App(){
             ))}
           </nav>
           <div className="sb-foot">
-            <div className="sb-ver">AURA OS v2.0 · OOP Showcase · Team SoloMid</div>
+            <div className="sb-ver">AURA OS v2.0 · Professional Edition · Team SoloMid</div>
           </div>
         </aside>
 
@@ -380,6 +409,7 @@ function App(){
               )}
               <span className={`mpill ${mode.key}`}>{mode.label}</span>
               {txns.length>0&&<button className="btn btn-sec btn-sm" onClick={()=>doTxn('undo',{})}>↩ Undo</button>}
+              <button className="btn btn-pri btn-sm" onClick={runDummyDemo} style={{boxShadow:'0 4px 15px rgba(107,48,53,0.3)'}}>🚀 Start Demo</button>
               <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${theme==='light'?'dark':'light'} mode`}>
                 <span>{theme==='light'?'🌙':'☀️'}</span>
                 <span>{theme==='light'?'Dark Mode':'Light Mode'}</span>
@@ -392,8 +422,8 @@ function App(){
             {page==='dash'&&<DashPage mode={mode} inv={inv} txns={txns} evts={events} strat={strat} mems={mems} revenue={revenue} totalQty={totalQty} lowStk={lowStk} purCount={purCount} onMode={modeChange} onStrat={stratChange}/>}
             {page==='txn' &&<TxnPage  mode={mode} inv={inv} strat={strat} txns={txns} mems={mems} doTxn={doTxn} decLog={decLog} decActive={decActive} lastMs={lastMs}/>}
             {page==='inv' &&<InvPage  inv={inv} strat={strat}/>}
+            {page==='kiosk'&&<KioskPage inv={inv} strat={strat} demoStep={demoStep} doTxn={doTxn}/>}
             {page==='hw'  &&<HwPage   addEvt={addEvt} toast={toast}/>}
-            {page==='pat' &&<PatPage  bus={bus}/>}
           </main>
         </div>
       </div>
@@ -419,14 +449,14 @@ function DashPage({mode,inv,txns,evts,strat,mems,revenue,totalQty,lowStk,purCoun
       <div className="g32 mb5">
         <div className="card">
           <div className="ch">
-            <span className="ct">⚙️ Kiosk State Machine <span className="pt p-sta">State Pattern</span></span>
+            <span className="ct">⚙️ Kiosk Operating Mode</span>
             <span className={`mpill ${mode.key}`}>{mode.label}</span>
           </div>
           <div className="cb"><StateMachine mode={mode} onMode={onMode}/></div>
         </div>
         <div className="card tan">
           <div className="ch">
-            <span className="ct">📡 Event Feed <span className="pt p-obs">Observer</span></span>
+            <span className="ct">📡 Live System Monitor</span>
             <span style={{fontSize:'.65rem',color:'var(--t3)'}}>{evts.length} events</span>
           </div>
           <div className="cb"><EvFeed evts={evts}/></div>
@@ -436,7 +466,7 @@ function DashPage({mode,inv,txns,evts,strat,mems,revenue,totalQty,lowStk,purCoun
       <div className="g23 mb5">
         <div className="card">
           <div className="ch">
-            <span className="ct">📸 Memento Snapshots <span className="pt p-mem">Memento</span></span>
+            <span className="ct">📸 State Recovery Snapshots</span>
             <span style={{fontSize:'.65rem',color:'var(--t3)'}}>{mems.length} active</span>
           </div>
           <div className="cb">
@@ -457,7 +487,7 @@ function DashPage({mode,inv,txns,evts,strat,mems,revenue,totalQty,lowStk,purCoun
         </div>
         <div className="card">
           <div className="ch">
-            <span className="ct">📐 Pricing Strategy <span className="pt p-str">Strategy Pattern</span></span>
+            <span className="ct">📐 Pricing Policy Management</span>
           </div>
           <div className="cb"><StratPanel strat={strat} onStrat={onStrat}/></div>
         </div>
@@ -565,10 +595,10 @@ function StratPanel({strat,onStrat}){
 // DECORATOR CHAIN VISUALIZER COMPONENT
 // ════════════════════════════════════════════════
 const DEC_LAYERS=[
-  {id:'tim',emoji:'⏱',label:'TimingDecorator',  sub:'Measures wall-clock time',  purchaseOnly:true},
-  {id:'log',emoji:'📋',label:'LoggingDecorator',  sub:'Logs PRE/POST execution',   purchaseOnly:false},
-  {id:'val',emoji:'✅',label:'ValidationDecorator',sub:'Pre-flight safety check',  purchaseOnly:true},
-  {id:'cmd',emoji:'⚡',label:'PurchaseCommand',   sub:'Core business logic',       purchaseOnly:false,isCore:true},
+  {id:'tim',emoji:'⏱',label:'Network Ping',  sub:'Measuring latency',  purchaseOnly:true},
+  {id:'log',emoji:'📋',label:'Audit Trail',  sub:'Generating compliance log',   purchaseOnly:false},
+  {id:'val',emoji:'✅',label:'Verification',sub:'Validating security token',  purchaseOnly:true},
+  {id:'cmd',emoji:'⚡',label:'Hardware Trigger',   sub:'Executing machine instruction',       purchaseOnly:false,isCore:true},
 ];
 
 function DecoratorChain({decActive,decLog,lastMs,strat}){
@@ -580,9 +610,7 @@ function DecoratorChain({decActive,decLog,lastMs,strat}){
     <div className="card mb5" style={{border:'1.5px solid var(--border-b)'}}>
       <div className="ch">
         <span className="ct">
-          🎨 Decorator Chain — Live Execution <span className="pt p-obs">Decorator</span>
-          <span className="pt p-cmd">wraps Command</span>
-          <span className="pt p-fac">transparent to Facade</span>
+          ⚙️ Diagnostic Pipeline — Live Execution
         </span>
         {lastMs!=null&&(
           <span style={{fontFamily:'var(--mono)',fontSize:'.7rem',color:'var(--success)',fontWeight:800,display:'flex',alignItems:'center',gap:5}}>
@@ -644,14 +672,10 @@ function DecoratorChain({decActive,decLog,lastMs,strat}){
           fontSize:'.65rem',color:'var(--t3)',fontFamily:'var(--mono)',
           marginBottom:12,lineHeight:1.8
         }}>
-          <span style={{color:'var(--blue-d)',fontWeight:700}}>TimingDecorator(</span>
-          <span style={{color:'var(--tan)',fontWeight:700}}>LoggingDecorator(</span>
-          <span style={{color:'var(--warn)',fontWeight:700}}>ValidationDecorator(</span>
-          <span style={{color:'var(--success)',fontWeight:700}}>PurchaseCommand(...)</span>
-          <span style={{color:'var(--warn)',fontWeight:700}}>)</span>
-          <span style={{color:'var(--tan)',fontWeight:700}}>)</span>
-          <span style={{color:'var(--blue-d)',fontWeight:700}}>)</span>
-          <span style={{color:'var(--t3)'}}> — execute a purchase to watch it run ↑</span>
+          <span style={{color:'var(--blue-d)',fontWeight:700}}>Network Connected →</span>
+          <span style={{color:'var(--tan)',fontWeight:700}}> Audit Synced →</span>
+          <span style={{color:'var(--warn)',fontWeight:700}}> Token Verified →</span>
+          <span style={{color:'var(--success)',fontWeight:700}}> Commanded Hardware</span>
         </div>
 
         {/* Decorator log feed */}
@@ -701,18 +725,18 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
   const price=prod?STRATS[strat].calc(prod.price,parseInt(qty)||1,ctx):0;
   const denied=mode.canBuy(parseInt(qty)||1,prod?.cat)?null
     :mode.key==='maintenance'?'Kiosk is under maintenance — purchases suspended.'
-    :'Emergency mode: essential items limited to 2 units per transaction.';
+    :'Emergency mode: ALL items limited to 2 units per transaction.';
 
   return(
     <div className="fade">
-      <div className="sec-title">Command Pipeline — Facade → Decorators → Commands <span className="pt p-fac">Facade</span><span className="pt p-cmd">Command</span><span className="pt p-mem">Memento</span></div>
+      <div className="sec-title">Transaction Processing Pipeline</div>
 
       {/* DECORATOR CHAIN VISUALIZER */}
       <DecoratorChain decActive={decActive} decLog={decLog} lastMs={lastMs} strat={strat}/>
 
       <div className="g2 mb5">
         <div className="card">
-          <div className="ch"><span className="ct">🛒 Purchase Item <span className="pt p-cmd">PurchaseCommand</span><span className="pt p-fac">Facade</span></span></div>
+          <div className="ch"><span className="ct">🛒 Process New Transaction</span></div>
           <div className="cb">
             <div className="form">
               <div className="fg">
@@ -732,14 +756,14 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
                     <span style={{color:'var(--t3)',fontSize:'.65rem'}}>avail:</span>
                     <strong style={{color:'var(--blue-d)',fontFamily:'var(--mono)'}}>{avail}</strong>
                   </span>
-                  <span><span style={{color:'var(--t3)',fontSize:'.68rem'}}>Strategy: </span><strong style={{color:'var(--tan)'}}>{STRATS[strat].nm}</strong></span>
+                  <span><span style={{color:'var(--t3)',fontSize:'.68rem'}}>Policy: </span><strong style={{color:'var(--tan)'}}>{STRATS[strat].nm}</strong></span>
                   <span style={{fontFamily:'var(--mono)',fontWeight:900,color:'var(--success)'}}>₹{price}</span>
                 </div>
               )}
               {denied&&<div className="fwarn">⚠️ {denied}</div>}
               <button className="btn btn-pri btn-full" disabled={!!denied||avail<(parseInt(qty)||1)}
                 onClick={()=>doTxn('purchase',{pid,qty:parseInt(qty)||1,amount:price,cat:prod?.cat})}>
-                ⚡ Execute PurchaseCommand
+                ⚡ Execute Transaction
               </button>
             </div>
           </div>
@@ -747,7 +771,7 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
 
         <div className="col">
           <div className="card wine">
-            <div className="ch"><span className="ct">↩️ Refund <span className="pt p-cmd">RefundCommand</span></span></div>
+            <div className="ch"><span className="ct">↩️ Process Refund</span></div>
             <div className="cb">
               <div className="form">
                 <div className="frow">
@@ -762,13 +786,13 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
                   </div>
                   <div className="fg" style={{maxWidth:80}}><label className="flbl">Qty</label><input type="number" className="finp" min="1" value={rqty} onChange={e=>setRqty(e.target.value)}/></div>
                 </div>
-                <button className="btn btn-danger btn-full" onClick={()=>doTxn('refund',{tid:rtid,amount:parseFloat(ramt)||0,pid:rpid,qty:parseInt(rqty)||1})}>↩️ Execute RefundCommand</button>
+                <button className="btn btn-danger btn-full" onClick={()=>doTxn('refund',{tid:rtid,amount:parseFloat(ramt)||0,pid:rpid,qty:parseInt(rqty)||1})}>↩️ Issue Refund</button>
               </div>
             </div>
           </div>
 
           <div className="card">
-            <div className="ch"><span className="ct">📦 Restock <span className="pt p-cmd">RestockCommand</span></span></div>
+            <div className="ch"><span className="ct">📦 Process Restock</span></div>
             <div className="cb">
               <div className="form">
                 <div className="frow">
@@ -780,7 +804,7 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
                   <div className="fg" style={{maxWidth:90}}><label className="flbl">Qty to Add</label><input type="number" className="finp" min="1" value={sqty} onChange={e=>setSqty(e.target.value)}/></div>
                 </div>
                 <button className="btn btn-emer btn-full" disabled={mode.key!=='active'&&mode.key!=='maintenance'}
-                  onClick={()=>doTxn('restock',{pid:spid,qty:parseInt(sqty)||1})}>📦 Execute RestockCommand</button>
+                  onClick={()=>doTxn('restock',{pid:spid,qty:parseInt(sqty)||1})}>📦 Update Inventory</button>
               </div>
             </div>
           </div>
@@ -789,12 +813,12 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
 
       <div className="card">
         <div className="ch">
-          <span className="ct">📋 Command History <span className="pt p-cmd">Command</span><span className="pt p-mem">Memento</span></span>
+          <span className="ct">📋 Operations Log</span>
           <span style={{fontSize:'.65rem',color:'var(--t3)'}}>{txns.length} operations</span>
         </div>
         <div className="cb">
           {!txns.length
-            ?<div className="empty"><div className="empty-ic">📋</div><div className="empty-t">No commands executed yet.</div></div>
+            ?<div className="empty"><div className="empty-ic">📋</div><div className="empty-t">No operations executed yet.</div></div>
             :<div className="txs">{[...txns].reverse().map(t=>(
               <div key={t.id} className="tx">
                 <span className={`txbadge b-${t.type==='purchase'?'pur':t.type==='refund'?'ref':t.type==='restock'?'res':'und'}`}>{t.type}</span>
@@ -815,7 +839,7 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
 function InvPage({inv,strat}){
   return(
     <div className="fade">
-      <div className="sec-title">Live Inventory <span className="pt p-str">Strategy-Priced</span><span className="pt p-fac">Derived Attributes</span></div>
+      <div className="sec-title">Live Inventory Tracker</div>
       <div className="card">
         <div className="ch"><span className="ct">📦 Stock Catalogue</span><span style={{fontSize:'.65rem',color:'var(--t3)',fontFamily:'var(--mono)'}}>{inv.length} products</span></div>
         <div style={{overflowX:'auto'}}>
@@ -889,9 +913,9 @@ function HwPage({addEvt,toast}){
 
   return(
     <div className="fade">
-      <div className="sec-title">Hardware Management <span className="pt p-chn">Chain of Resp.</span></div>
+      <div className="sec-title">Hardware Diagnostics</div>
       <div className="card mb5">
-        <div className="ch"><span className="ct">⛓️ Failure Chain Visualizer <span className="pt p-chn">Chain of Responsibility</span></span></div>
+        <div className="ch"><span className="ct">⛓️ Automated Diagnostic Escalation</span></div>
         <div className="cb">
           <div className="chain">
             {HANDLERS.map((h,i)=>(
@@ -935,106 +959,61 @@ function HwPage({addEvt,toast}){
   );
 }
 
-// ════════════════════════════════════════════════
-// PATTERNS PAGE
-// ════════════════════════════════════════════════
-function PatPage({bus}){
-  const[subs,setSubs]=useState(bus.totalSubs());
-  useEffect(()=>{const id=setInterval(()=>setSubs(bus.totalSubs()),600);return()=>clearInterval(id);},[]);
 
-  const kiosks=[
-    {nm:'PharmacyKiosk',ic:'💊',desc:'Blocks ANON users from controlled substances. Prescription validation enforced.',c:'var(--wine)'},
-    {nm:'FoodKiosk',ic:'🍱',desc:'Checks refrigeration module status. HW side-effects removed from validation.',c:'var(--success)'},
-    {nm:'EmergencyReliefKiosk',ic:'🚑',desc:'No prescription checks. EmergencyState enforces qty limits directly.',c:'var(--warn)'},
-  ];
-  const facade=[
-    {nm:'purchase_item()',pt:'p-cmd',dc:'mode check → validate → PurchaseCommand.execute()'},
-    {nm:'refund_transaction()',pt:'p-cmd',dc:'RefundCommand → payment refund + inventory restore'},
-    {nm:'restock_inventory()',pt:'p-cmd',dc:'RestockCommand → undoable stock addition'},
-    {nm:'run_diagnostics()',pt:'p-fac',dc:'Full status: mode, hardware, pricing, events'},
-    {nm:'set_operating_mode()',pt:'p-sta',dc:'Force state transition via KioskStateManager'},
-    {nm:'get_stock_info()',pt:'p-str',dc:'Derived available stock + live strategy price'},
-    {nm:'undo_last_command()',pt:'p-mem',dc:'Pop & reverse last command from history stack'},
-    {nm:'subscribe_to_events()',pt:'p-obs',dc:'Register Observer callback with EventBus singleton'},
-  ];
-
+// ════════════════════════════════════════════════
+// KIOSK SIMULATOR (DUMMY OPERATION VIEW)
+// ════════════════════════════════════════════════
+function KioskPage({inv,strat,demoStep,doTxn}){
+  const cats={essential:'🍱',general:'📦',premium:'💎',otc:'💊',prescription:'📜',controlled_substance:'⚠️'};
+  
   return(
-    <div className="fade">
-      <div className="sec-title">All OOP Design Patterns</div>
-      <div className="pbwall">
-        {PBADGES.map(p=>(
-          <div key={p.nm} className={`pb ${p.pc}`}>
-            <span className="pb-ic">{p.ic}</span>
-            <div><div className="pb-n">{p.nm}</div><div className="pb-d">{p.dc}</div></div>
-          </div>
-        ))}
-      </div>
-
-      <div className="g2 mb5">
-        <div className="card">
-          <div className="ch"><span className="ct">🔮 Singleton — EventBus <span className="pt p-sin">Singleton</span></span></div>
-          <div className="cb">
-            <div className="sing-box">
-              <div className="sing-pulse">🔮</div>
-              <div>
-                <div className="sing-title">EventBus._instance</div>
-                <div className="sing-d">One global instance shared by ALL subsystems. Calling EventBus.get() always returns the same reference — never creates a second instance.</div>
-                <div className="sing-c">Active Subscribers: <strong>{subs}</strong></div>
-              </div>
-            </div>
-            <div style={{marginTop:11,fontFamily:'var(--mono)',fontSize:'.65rem',lineHeight:2.2,color:'var(--t2)'}}>
-              <span style={{color:'var(--blue-d)'}}>EventBus._instance</span> → always same reference<br/>
-              <span style={{color:'var(--tan)'}}>bus.pub(type, payload)</span> → notify all subscribers<br/>
-              <span style={{color:'var(--success)'}}>bus.sub(type, fn)</span> → returns unsubscribe function
-            </div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="ch"><span className="ct">🏭 Abstract Factory — Kiosk Types <span className="pt p-fly">Factory</span></span></div>
-          <div className="cb">
-            <div style={{display:'flex',flexDirection:'column',gap:8}}>
-              {kiosks.map(k=>(
-                <div key={k.nm} style={{display:'flex',alignItems:'center',gap:11,padding:'10px 13px',borderRadius:10,border:'1px solid var(--border)',background:'var(--bg)'}}>
-                  <span style={{fontSize:'1.3rem'}}>{k.ic}</span>
-                  <div><div style={{fontFamily:'var(--mono)',fontSize:'.7rem',fontWeight:800,color:k.c}}>{k.nm}</div><div style={{fontSize:'.62rem',color:'var(--t3)',marginTop:2}}>{k.desc}</div></div>
+    <div className="fade" style={{display:'flex',justifyContent:'center',paddingTop:10}}>
+      <div style={{position:'relative'}}>
+        <div className="kiosk-sim-frame">
+          <div className="kiosk-sim-screen">
+            <header className="kiosk-sim-header">AURA KIOSK — Hospital Unit 01</header>
+            
+            <div className="kiosk-sim-body">
+              <div style={{marginBottom:15}}>
+                <div style={{fontSize:'.8rem',fontWeight:900,marginBottom:10,color: 'var(--t2)' }}>CHOOSE PRODUCT</div>
+                <div className="kiosk-product-grid">
+                  {inv.slice(0,4).map(p=>{
+                    const live=STRATS[strat].calc(p.price,1,{cat:p.cat,tier:'standard'});
+                    return(
+                      <div key={p.id} className="kiosk-item" onClick={()=>!demoStep && doTxn('purchase',{pid:p.id,qty:1,amount:live,cat:p.cat})}>
+                        <div className="kiosk-item-img">{cats[p.cat]||'📦'}</div>
+                        <div className="kiosk-item-name">{p.nm}</div>
+                        <div className="kiosk-item-price">₹{live}</div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+              </div>
 
-      <div className="card mb5">
-        <div className="ch"><span className="ct">🏛️ Facade — KioskInterface Unified API <span className="pt p-fac">Facade</span></span></div>
-        <div className="cb">
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-            {facade.map(m=>(
-              <div key={m.nm} style={{display:'flex',alignItems:'flex-start',gap:8,padding:'9px 12px',borderRadius:10,background:'var(--bg)',border:'1px solid var(--border)'}}>
-                <div style={{flex:1}}>
-                  <div style={{fontFamily:'var(--mono)',fontSize:'.68rem',fontWeight:700,color:'var(--blue-d)',marginBottom:3}}>{m.nm}</div>
-                  <div style={{fontSize:'.62rem',color:'var(--t3)'}}>{m.dc}</div>
+              <div style={{background:'var(--bg2)',borderRadius:12,padding:12,border:'1px dashed var(--border-b)'}}>
+                <div style={{fontSize:'.6rem',fontWeight:800,color:'var(--t3)',marginBottom:6,textTransform:'uppercase'}}>Payment Terminal</div>
+                <div style={{display:'flex',gap:6}}>
+                   {['💳','📱','⌚'].map(i=><div key={i} style={{width:35,height:25,background:'var(--card)',borderRadius:4,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.8rem',border:'1px solid var(--border)'}}>{i}</div>)}
                 </div>
-                <span className={`pt ${m.pt}`} style={{flexShrink:0,marginTop:2}}>→</span>
               </div>
-            ))}
+            </div>
+
+            <footer style={{padding:12,background:'var(--bg)',borderTop:'1px solid var(--border)',textAlign:'center'}}>
+              <div style={{fontSize:'.55rem',color:'var(--t4)',fontFamily:'var(--mono)'}}>ID: PHARM-001 | SYS: AURA OS 2.0</div>
+            </footer>
+
+            {/* Simulation Overlay */}
+            {demoStep && (
+              <div className="demo-step-overlay">
+                <div className="demo-step-title">{demoStep.t}</div>
+                <div className="demo-step-msg">{demoStep.msg}</div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Team credits */}
-      <div className="card" style={{background:'linear-gradient(135deg,rgba(155,180,192,.08),rgba(107,48,53,.05))'}}>
-        <div className="cb" style={{textAlign:'center',padding:'28px 20px'}}>
-          <div style={{fontFamily:'var(--serif)',fontSize:'1.3rem',fontWeight:900,color:'var(--t1)',marginBottom:6}}>Team SoloMid</div>
-          <div style={{fontSize:'.75rem',color:'var(--t2)',marginBottom:18}}>Object-Oriented Programming Project · BVMIT · 2025</div>
-          <div style={{display:'flex',justifyContent:'center',gap:12,flexWrap:'wrap'}}>
-            {TEAM.map(m=>(
-              <div key={m.nm} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
-                <div className={`member-av ${m.avCls}`} style={{width:44,height:44,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'.75rem',fontWeight:900,color:'#fff'}}>{m.av}</div>
-                <div style={{fontSize:'.72rem',fontWeight:700,color:'var(--t1)'}}>{m.nm}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{marginTop:20,fontSize:'.8rem'}}>Made with ❤️ by Team SoloMid</div>
+        <div style={{textAlign:'center',marginTop:20,fontSize:'.7rem',color:'var(--t3)',fontFamily:'var(--mono)'}}>
+          Physical Kiosk Hardware Target: RoboticArmDispenser v4
         </div>
       </div>
     </div>
@@ -1042,3 +1021,4 @@ function PatPage({bus}){
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
