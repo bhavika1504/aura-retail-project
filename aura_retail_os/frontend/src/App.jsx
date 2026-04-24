@@ -181,13 +181,42 @@ function App(){
   const[page,setPage]=useState('dash');
   const[mode,setMode]=useState(KSTATES.active);
   const[strat,setStrat]=useState('standard');
-  const[inv,setInv]=useState(SEED);
+  const[inv,setInv]=useState([]);
   const[txns,setTxns]=useState([]);
   const[events,setEvts]=useState([
-    {id:'e0',time:'--:--:--',kind:'mc',type:'ModeChangedEvent',msg:'KIOSK-01 initialized → ACTIVE mode'},
-    {id:'e1',time:'--:--:--',kind:'mc',type:'Singleton',       msg:'EventBus instance created (single global instance)'},
+    {id:'e0',time:'--:--:--',kind:'mc',type:'Network',msg:'Connecting to Aura Kiosk Backend...'},
   ]);
   const[mems,setMems]=useState([]);
+
+  // Fetch logic
+  const fetchState = useCallback(async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/state');
+      if (res.ok) {
+        const data = await res.json();
+        setMode(KSTATES[data.mode] || KSTATES.active);
+        setStrat(data.strat || 'standard');
+        setTxns(data.txns || []);
+      }
+    } catch(e) {}
+  }, []);
+
+  const fetchInv = useCallback(async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/inventory');
+      if (res.ok) {
+        const data = await res.json();
+        setInv(data);
+      }
+    } catch(e) {}
+  }, []);
+
+  useEffect(() => {
+    fetchState();
+    fetchInv();
+    const id = setInterval(() => { fetchState(); fetchInv(); }, 1500);
+    return () => clearInterval(id);
+  }, [fetchState, fetchInv]);
   const{toasts,add:toast,rm:toastRm}=useToast();
 
   // THEME — persists across refresh
@@ -277,75 +306,61 @@ function App(){
     bus.pub(type,{msg});
   },[]);
 
-  const modeChange=useCallback((next)=>{
-    if(next.key===mode.key)return;
-    const prev=mode;
-    setMode(next);
-    if(next.key==='emergency'){
-      setStrat('emergency');
-      addEvt('em','EmergencyModeActivated',`${prev.label} → Emergency · EmergencyPricing activated.`);
-      toast('warning','Emergency Mode','Purchase limits enforced. Emergency pricing active.');
-    } else {
-      if(prev.key==='emergency')setStrat('standard');
-      addEvt('mc','ModeChangedEvent',`${prev.label} → ${next.label}`);
-      toast('info','Mode Transition',`Kiosk now in ${next.label} mode.`);
-    }
-  },[mode,addEvt,toast]);
+  const modeChange=useCallback(async(next)=>{
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/mode', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ mode: next.key })
+      });
+      if(res.ok){ fetchState(); toast('info','Mode Transition',`Kiosk now in ${next.label} mode.`); }
+    } catch(e){}
+  },[fetchState,toast]);
 
   const stratChange=useCallback((k)=>{
+    // Strategy change is managed by mode in the new backend, but keeping generic hook if needed.
     setStrat(k);
-    addEvt('mc','PricingStrategyChanged',`Strategy → ${STRATS[k].nm}`);
     toast('info','Strategy Updated',STRATS[k].desc);
-  },[addEvt,toast]);
+  },[toast]);
 
-  const doTxn=useCallback((type,data)=>{
-    const id=uid(),t=ts();
+  const doTxn=useCallback(async(type,data)=>{
+    const urlMap = {
+      purchase: '/api/purchase',
+      refund: '/api/refund',
+      restock: '/api/restock',
+      undo: '/api/undo'
+    };
+    
     if(type==='purchase'){
-      const{pid,qty,amount,cat}=data;
-      if(!mode.canBuy(qty,cat)){
-        toast('error','Purchase Denied',mode.key==='maintenance'?'Kiosk under maintenance.':'Emergency: max 2 units/txn.');
-        addEvt('rb','PurchaseDenied',`${qty}× ${pid} denied by ${mode.label} State handler.`);
-        return;
-      }
-      const prod=inv.find(p=>p.id===pid);
-      const avail=prod?Math.max(0,prod.qty-prod.res-prod.hw):0;
-      if(!prod||avail<qty){toast('error','Insufficient Stock',`Only ${avail} units available.`);return;}
-      setMems(p=>[...p,{id,pid,qty,amount,time:t}]);
-      addEvt('tx','MementoSaved',`📸 Snapshot TXN-${id} saved before commit point.`);
-      // Run through decorator chain (animated) then commit
-      runDecChain('PurchaseCommand','purchase',()=>{
-        setInv(p=>p.map(x=>x.id===pid?{...x,res:x.res+qty}:x));
-        setTimeout(()=>{
-          setInv(p=>p.map(x=>x.id===pid?{...x,res:Math.max(0,x.res-qty),qty:Math.max(0,x.qty-qty)}:x));
-          setMems(p=>p.filter(m=>m.id!==id));
-          addEvt('tx','MementoDiscarded',`TXN-${id} snapshot discarded — committed successfully.`);
-        },1500);
-        setTxns(p=>[...p,{id,type:'purchase',desc:`Purchase[${id}]: ${qty}× ${pid} @ ₹${amount}`,time:t,amount}]);
-        addEvt('tx','PurchaseCommand.execute()',`✅ TXN-${id}: ${qty}× ${pid} — ₹${amount} charged.`);
-        if(avail-qty<=5)addEvt('ls','LowStockEvent',`⚠️ ${pid} critically low — ${avail-qty} units remaining!`);
-        toast('success','Purchase Complete',`${qty}× ${prod.nm} — ₹${amount}`);
-      });
-    } else if(type==='refund'){
-      const{tid,amount,pid,qty}=data;
-      setInv(p=>p.map(x=>x.id===pid?{...x,qty:x.qty+qty}:x));
-      setTxns(p=>[...p,{id,type:'refund',desc:`Refund[${tid||id}]: ₹${amount}`,time:t,amount}]);
-      addEvt('rb','RefundCommand.execute()',`↩️ Refund ₹${amount} for ${tid||id} — inventory restored.`);
-      toast('info','Refund Processed',`₹${amount} returned.`);
-    } else if(type==='restock'){
-      const{pid,qty}=data;
-      const prod=inv.find(p=>p.id===pid);
-      setInv(p=>p.map(x=>x.id===pid?{...x,qty:x.qty+qty}:x));
-      setTxns(p=>[...p,{id,type:'restock',desc:`Restock: +${qty}× ${pid}`,time:t}]);
-      addEvt('tx','RestockCommand.execute()',`📦 +${qty} units of ${prod?.nm||pid} committed.`);
-      toast('success','Restocked',`+${qty} units added.`);
-    } else if(type==='undo'){
-      if(!txns.length){toast('warning','Nothing to Undo','Command stack is empty.');return;}
-      const last=txns[txns.length-1];
-      setTxns(p=>[...p.slice(0,-1),{id,type:'undo',desc:`Undo: ${last.desc}`,time:t}]);
-      addEvt('rb','CommandInvoker.undo_last()',`↩️ Undone: ${last.desc}`);
-      toast('info','Command Undone',last.desc);
+       runDecChain('PurchaseCommand','purchase', async () => {
+         try {
+           const res = await fetch(`http://127.0.0.1:5000${urlMap[type]}`, {
+             method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+           });
+           if (!res.ok) {
+             const j = await res.json();
+             toast('error', 'Purchase Denied', j.error || 'Server rejected transaction');
+             return false;
+           }
+           fetchInv(); fetchState();
+           toast('success', 'Purchase Complete', `${data.qty}x ${data.pid}`);
+           return true;
+         } catch(e) { return false; }
+       });
+    } else {
+       try {
+         const res = await fetch(`http://127.0.0.1:5000${urlMap[type]}`, {
+           method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data||{})
+         });
+         if (!res.ok) { 
+            const j = await res.json();
+            toast('error', 'Action failed', j.error || 'Check server logs'); 
+            return; 
+         }
+         fetchInv(); fetchState();
+         toast('success', `Action Complete: ${type}`);
+       } catch(e) {}
     }
-  },[mode,inv,txns,addEvt,toast]);
+  },[fetchState, fetchInv, runDecChain, toast]);
 
   const revenue=useMemo(()=>txns.filter(t=>t.type==='purchase').reduce((s,t)=>s+t.amount,0),[txns]);
   const totalQty=useMemo(()=>inv.reduce((s,p)=>s+p.qty,0),[inv]);

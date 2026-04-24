@@ -1,51 +1,64 @@
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+
+from core.kiosk_factory import PharmacyKioskFactory, FoodKioskFactory
+from interface.kiosk_interface import KioskInterface
 from events.event_bus import EventBus
-from events.events import ModeChangedEvent, EmergencyModeActivated
-from inventory.pricing_strategies import StandardPricing, DiscountPricing, EmergencyPricing
-from inventory.pricing_strategy import PricingContext
-from core.kiosk_states import ActiveState, MaintenanceState, EmergencyState
-from core.kiosk_mode_manager import KioskModeManager
+from events.events import ModeChangedEvent, HardwareFailureEvent
 
+def run_simulation():
+    print("="*60)
+    print("   AURA OS — Retail Kiosk Intelligence Simulation   ")
+    print("="*60)
+    
+    # 1. SETUP: Initialize Global Observer (Singleton + Observer)
+    # The EventBus is a Singleton — we get the same instance everywhere.
+    bus = EventBus()
+    bus.subscribe(ModeChangedEvent, lambda e: print(f"  [OBSERVER] Received ModeChangedEvent: {e.old_mode} -> {e.new_mode}"))
+    bus.subscribe(HardwareFailureEvent, lambda e: print(f"  [OBSERVER] Received HardwareFailureEvent: {e.reason}"))
 
+    # 2. FACTORY: Create a Pharmacy Kiosk
+    # The PharmacyKioskFactory (Abstract Factory) wires together a RoboticArmDispenser, 
+    # CardPayment, and specific medicine inventory.
+    print("\n[PHASE 1] Initializing Pharmacy Kiosk...")
+    factory = PharmacyKioskFactory()
+    pharmacy_kiosk = factory.create_kiosk("PHARM-001", "City Hospital")
+    
+    # 3. FACADE: Interact through KioskInterface
+    # We use the KioskInterface (Facade) so we don't have to deal with 
+    # CommandInvoker or ModeManager directly.
+    kiosk = KioskInterface(pharmacy_kiosk)
+    
+    # 4. COMMAND + DECORATOR: Execute a basic purchase
+    # This triggers PurchaseCommand wrapped in Timing and Logging Decorators.
+    print("\n[PHASE 2] Executing standard purchase...")
+    kiosk.purchase_item("MED001", qty=2, user_id="CUST-77")
 
-print("\n========= OBSERVER SUBSCRIBER ============")
+    # 5. STATE + STRATEGY: Switch to Emergency Mode
+    # State pattern changes behavior; Strategy pattern changes pricing.
+    print("\n[PHASE 3] Simulating Emergency Mode activation...")
+    kiosk.set_operating_mode("emergency")
+    
+    # Check live stock info (Derived via Strategy)
+    info = kiosk.get_stock_info("MED001")
+    print(f"  Live Price (Emergency Strategy): ₹{info['live_price']}")
+    
+    # Try to buy too much in Emergency Mode (Denial by State)
+    print("\n[PHASE 4] Attempting restricted purchase (5 units) in Emergency Mode...")
+    kiosk.purchase_item("MED001", qty=5)
 
-bus = EventBus()
+    # 6. MEMENTO: Undo the last successful command
+    # We'll switch back to active mode and undo.
+    print("\n[PHASE 5] Restoring Active Mode and Testing Undo...")
+    kiosk.set_operating_mode("active")
+    kiosk.undo_last_command() # Should undo the last modification if possible
 
-bus.subscribe(ModeChangedEvent,
-    lambda e: print(f"[City Monitor] Mode changed: {e.old_mode} → {e.new_mode}"))
-bus.subscribe(EmergencyModeActivated,
-    lambda e: print(f"[City Monitor] EMERGENCY on kiosk {e.kiosk_id}"))
-bus.publish(ModeChangedEvent(
-    kiosk_id="KIOSK-01",
-    old_mode="ACTIVE",
-    new_mode="MAINTENANCE"
-))
-bus.publish(EmergencyModeActivated(
-    reason="System Failure",
-    kiosk_id="KIOSK-01"
-))
+    # 7. DIAGNOSTICS: Review System State
+    kiosk.run_diagnostics()
 
-# ===================== STATE PATTERN =====================
-print("\n=====------- STATE PATTERN ----------=====")
+    print("\n" + "="*60)
+    print("   Simulation Complete — All Design Patterns Validated   ")
+    print("="*60)
 
-manager = KioskModeManager("KIOSK-01")
-
-print(f"Current mode: {manager.get_current_mode()}")
-
-manager.set_state(MaintenanceState())
-print(f"Purchase in maintenance: {manager.handle_purchase('MED001', 1)}")
-
-manager.set_state(EmergencyState())
-print(f"Buy 5 units in emergency: {manager.handle_purchase('MED001', 5)}")
-print(f"Buy 1 unit in emergency:  {manager.handle_purchase('MED001', 1)}")
-
-
-# ===================== STRATEGY PATTERN =====================
-print("\n=====-------- STRATEGY PATTERN ---------=====")
-
-ctx = PricingContext(mode="active")
-
-for strategy in [StandardPricing(), DiscountPricing(0.20), EmergencyPricing()]:
-    manager.switch_pricing_strategy(strategy)
-    price = manager.get_pricing_strategy().calculate_price(100.0, ctx)
-    print(f"{strategy.get_name()}: Rs.100 → Rs.{price}")
+if __name__ == "__main__":
+    run_simulation()

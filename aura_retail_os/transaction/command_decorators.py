@@ -68,14 +68,14 @@ class LoggingDecorator(CommandDecorator):
     def execute(self) -> bool:
         cmd_name = type(self._wrapped).__name__
 
-        pre_msg = f"[LoggingDecorator] PRE  → {cmd_name}.execute() called"
+        pre_msg = f"[LoggingDecorator] PRE  -> {cmd_name}.execute() called"
         self._log.append(pre_msg)
         print(pre_msg)
 
         result = self._wrapped.execute()
 
         status = "SUCCESS ✅" if result else "FAILED ❌"
-        post_msg = f"[LoggingDecorator] POST ← {cmd_name} {status}"
+        post_msg = f"[LoggingDecorator] POST <- {cmd_name} {status}"
         self._log.append(post_msg)
         print(post_msg)
 

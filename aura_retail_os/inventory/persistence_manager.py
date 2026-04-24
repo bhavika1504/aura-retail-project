@@ -35,7 +35,7 @@ class PersistenceManager:
     def log_transaction(self, record: Dict[str, Any]) -> None:
         path = self._path("transactions.csv")
         file_exists = os.path.exists(path)
-        with open(path, "a", newline="") as fh:
+        with open(path, "a", newline="", encoding="utf-8") as fh:
             writer = csv.DictWriter(fh, fieldnames=list(record.keys()))
             if not file_exists:
                 writer.writeheader()

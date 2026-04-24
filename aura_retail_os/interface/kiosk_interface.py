@@ -46,10 +46,10 @@ class KioskInterface:
     ) -> bool:
         """
         Full atomic purchase flow:
-          mode check → kiosk validation → PurchaseCommand → execute
+          mode check -> kiosk validation -> PurchaseCommand -> execute
         Returns True on success, False on any rejection or failure.
         """
-        sep = "─" * 55
+        sep = "-" * 55
         print(f"\n{sep}")
         print(
             f"[KioskInterface] PURCHASE  kiosk={self._kiosk.kiosk_id}  "
@@ -131,7 +131,7 @@ class KioskInterface:
         Includes mode, hardware, pricing, and mode constraints.
         """
         status = self._kiosk.get_operational_status()
-        print(f"\n{'─'*55}")
+        print(f"\n{'-'*55}")
         print(f"[KioskInterface] DIAGNOSTICS — {self._kiosk.kiosk_id}")
         for key, value in status.items():
             print(f"  {key:<22}: {value}")

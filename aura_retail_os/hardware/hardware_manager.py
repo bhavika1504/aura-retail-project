@@ -34,9 +34,9 @@ class HardwareManager:
     # ----------------------------------------------------------
     def set_dispenser(self, dispenser: DispenserHardware) -> None:
         """Hot-swap the dispenser at runtime (Path B constraint)."""
-        old = type(self._dispenser).__name__
+        old = type(self._dispenser).__name__ if self._dispenser else "None"
         self._dispenser = dispenser
-        print(f"[HardwareManager] Dispenser swapped: {old} → {type(dispenser).__name__}")
+        print(f"[HardwareManager] Dispenser swapped: {old} -> {type(dispenser).__name__}")
 
     def dispense_product(self, product_id: str, qty: int) -> bool:
         """
