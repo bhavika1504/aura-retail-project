@@ -9,37 +9,67 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-from core.kiosk_factory import PharmacyKioskFactory
+from core.kiosk_factory import PharmacyKioskFactory, FoodKioskFactory, EmergencyKioskFactory
 from interface.kiosk_interface import KioskInterface
 from registry.central_registry import CentralRegistry
 
 app = Flask(__name__)
 CORS(app)
 
-# Initialize the system exactly like main.py
-factory = PharmacyKioskFactory()
-kiosk = factory.create_kiosk("PHARM-001", "City Hospital")
-registry = CentralRegistry()
-registry.register_kiosk("PHARM-001", kiosk)
-interface = KioskInterface(kiosk)
+# Initialize all three kiosk types as per spec 3.4
+pharmacy_factory = PharmacyKioskFactory()
+food_factory = FoodKioskFactory()
+emergency_factory = EmergencyKioskFactory()
+
+kiosks = {
+    "PHARM-001": pharmacy_factory.create_kiosk("PHARM-001", "City Hospital"),
+    "FOOD-002": food_factory.create_kiosk("FOOD-002", "Metro Station"),
+    "EMERG-003": emergency_factory.create_kiosk("EMERG-003", "Relief Camp Sector 7")
+}
+
+# Default active kiosk
+active_kiosk_id = "PHARM-001"
+
+def get_active_kiosk():
+    return kiosks[active_kiosk_id]
+
+def get_active_interface():
+    return KioskInterface(get_active_kiosk())
+
+@app.route("/api/kiosks", methods=["GET"])
+def list_kiosks():
+    return jsonify([
+        {"id": k.kiosk_id, "type": k.get_kiosk_type(), "location": k.location}
+        for k in kiosks.values()
+    ])
+
+@app.route("/api/kiosk/select", methods=["POST"])
+def select_kiosk():
+    global active_kiosk_id
+    data = request.json
+    kid = data.get("id")
+    if kid in kiosks:
+        active_kiosk_id = kid
+        return jsonify({"status": "success", "active_id": active_kiosk_id})
+    return jsonify({"error": "Kiosk not found"}), 404
 
 @app.route("/api/state", methods=["GET"])
 def get_state():
+    kiosk = get_active_kiosk()
+    interface = KioskInterface(kiosk)
     status = interface.run_diagnostics()
     history = interface.get_transaction_history()
     
-    # Map raw history strings into frontend txn objects
     txns = []
     for t in history:
         txns.append({
             "id": str(uuid.uuid4())[:8],
             "type": "purchase" if "Purchase" in t else ("restock" if "Restock" in t else "refund"),
-            "amount": 0.0,  # Could parse it if needed
+            "amount": 0.0,
             "desc": t,
             "time": datetime.now().strftime("%H:%M:%S")
         })
 
-    # Try to map Python state class to frontend mode key
     mode_name = kiosk.mode_manager.get_current_mode()
     mode_map = {
         "ACTIVE": "active",
@@ -49,22 +79,26 @@ def get_state():
     }
     mode_key = mode_map.get(mode_name, "active")
 
-    # The PricingStrategy in python does not perfectly map to the React hardcoded ones unless we infer it by name
     strat_key = "standard"
     if mode_key == "emergency":
         strat_key = "emergency"
 
     return jsonify({
+        "id": kiosk.kiosk_id,
+        "type": kiosk.get_kiosk_type(),
+        "location": kiosk.location,
         "status": status,
         "txns": txns,
         "mode": mode_key,
         "strat": strat_key,
-        "events": [], # EventBus doesn't natively cache across requests in this design without a hook
-        "mems": []    # Memento caretaker has backups, but we don't expose them directly in the Facade yet
+        "events": [],
+        "mems": []
     })
 
 @app.route("/api/inventory", methods=["GET"])
 def get_inventory():
+    kiosk = get_active_kiosk()
+    interface = KioskInterface(kiosk)
     prods = []
     for pid, product in kiosk.inventory.all_products().items():
         info = interface.get_stock_info(pid)
@@ -72,7 +106,7 @@ def get_inventory():
             prods.append({
                 "id": info["product_id"],
                 "nm": info["name"],
-                "cat": product.category,  # Map to React's 'cat'
+                "cat": product.category,
                 "qty": product.quantity,
                 "res": info["reserved"],
                 "hw": info["hw_faulted"],
@@ -86,7 +120,7 @@ def get_inventory():
 def set_mode():
     data = request.json
     mode = data.get("mode")
-    interface.set_operating_mode(mode)
+    get_active_interface().set_operating_mode(mode)
     return jsonify({"status": "success", "mode": mode})
 
 
@@ -97,7 +131,7 @@ def purchase():
     qty = data.get("qty", 1)
     uid = data.get("uid", "USER001")
     
-    success = interface.purchase_item(pid, qty, uid)
+    success = get_active_interface().purchase_item(pid, qty, uid)
     if success:
         return jsonify({"status": "success"})
     return jsonify({"error": "Purchase failed or denied by constraints"}), 400
@@ -111,7 +145,7 @@ def refund():
     pid = data.get("pid")
     qty = data.get("qty", 1)
     
-    success = interface.refund_transaction(tid, float(amount), pid, int(qty))
+    success = get_active_interface().refund_transaction(tid, float(amount), pid, int(qty))
     if success:
         return jsonify({"status": "success"})
     return jsonify({"error": "Refund failed"}), 400
@@ -123,10 +157,17 @@ def restock():
     pid = data.get("pid")
     qty = data.get("qty", 1)
     
-    success = interface.restock_inventory(pid, int(qty))
+    success = get_active_interface().restock_inventory(pid, int(qty))
     if success:
         return jsonify({"status": "success"})
     return jsonify({"error": "Restock failed"}), 400
+
+@app.route("/api/undo", methods=["POST"])
+def undo():
+    success = get_active_interface().undo_last_command()
+    if success:
+        return jsonify({"status": "success"})
+    return jsonify({"error": "Undo failed"}), 400
 
 if __name__ == "__main__":
     print("\n[FLASK] Starting Aura Kiosk REST API...")
