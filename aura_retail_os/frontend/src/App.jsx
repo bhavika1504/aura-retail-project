@@ -183,10 +183,36 @@ function App(){
   const[strat,setStrat]=useState('standard');
   const[inv,setInv]=useState([]);
   const[txns,setTxns]=useState([]);
+  const[kiosks,setKiosks]=useState([]);
+  const[activeKiosk,setActiveKiosk]=useState({id:'PHARM-001',type:'PharmacyKiosk',location:'City Hospital'});
   const[events,setEvts]=useState([
     {id:'e0',time:'--:--:--',kind:'mc',type:'Network',msg:'Connecting to Aura Kiosk Backend...'},
   ]);
   const[mems,setMems]=useState([]);
+
+  const fetchKiosks = useCallback(async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/kiosks');
+      if (res.ok) {
+        const data = await res.json();
+        setKiosks(data);
+      }
+    } catch(e) {}
+  }, []);
+
+  const switchKiosk = useCallback(async (id) => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/kiosk/select', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        fetchState();
+        fetchInv();
+      }
+    } catch(e) {}
+  }, []);
 
   // Fetch logic
   const fetchState = useCallback(async () => {
@@ -197,6 +223,7 @@ function App(){
         setMode(KSTATES[data.mode] || KSTATES.active);
         setStrat(data.strat || 'standard');
         setTxns(data.txns || []);
+        setActiveKiosk({id: data.id, type: data.type, location: data.location});
       }
     } catch(e) {}
   }, []);
@@ -212,11 +239,12 @@ function App(){
   }, []);
 
   useEffect(() => {
+    fetchKiosks();
     fetchState();
     fetchInv();
     const id = setInterval(() => { fetchState(); fetchInv(); }, 1500);
     return () => clearInterval(id);
-  }, [fetchState, fetchInv]);
+  }, [fetchState, fetchInv, fetchKiosks]);
   const{toasts,add:toast,rm:toastRm}=useToast();
 
   // THEME — persists across refresh
@@ -251,8 +279,11 @@ function App(){
     for(const s of steps){
       setDemoStep(s);
       if(s.t==='HARDWARE OP'){
-        // Trigger the actual purchase logic
-        doTxn('purchase',{pid:'MED001',qty:1,amount:25,cat:'essential'});
+        // Trigger the actual purchase logic using the first available product in current kiosk
+        const firstProd = inv[0];
+        if(firstProd) {
+          doTxn('purchase',{pid:firstProd.id, qty:1, amount:firstProd.price, cat:firstProd.cat});
+        }
       }
       await new Promise(r=>setTimeout(r,s.wait));
     }
@@ -316,11 +347,18 @@ function App(){
     } catch(e){}
   },[fetchState,toast]);
 
-  const stratChange=useCallback((k)=>{
-    // Strategy change is managed by mode in the new backend, but keeping generic hook if needed.
-    setStrat(k);
-    toast('info','Strategy Updated',STRATS[k].desc);
-  },[toast]);
+  const stratChange = useCallback(async (k) => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/strategy', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ strat: k })
+      });
+      if (res.ok) {
+        setStrat(k);
+        toast('info', 'Strategy Updated', STRATS[k].desc);
+      }
+    } catch(e) {}
+  }, [toast]);
 
   const doTxn=useCallback(async(type,data)=>{
     const urlMap = {
@@ -380,10 +418,25 @@ function App(){
             <div className="logo-t">Kiosk Intelligence</div>
           </div>
           <div className="sb-team">⚡ Team SoloMid</div>
+          
+          <div style={{padding:'0 16px', marginBottom: 12}}>
+            <div className="nav-sec" style={{marginBottom: 8}}>SELECT KIOSK</div>
+            <select 
+              className="finp fsel" 
+              style={{width:'100%', padding:'8px', fontSize:'.7rem'}}
+              value={activeKiosk.id}
+              onChange={(e) => switchKiosk(e.target.value)}
+            >
+              {kiosks.map(k => (
+                <option key={k.id} value={k.id}>{k.type} ({k.id})</option>
+              ))}
+            </select>
+          </div>
+
           <div className="kchip" style={{cursor:'default'}}>
             <span className={`kchip-dot ${mode.key}`}/>
             <div style={{flex:1,minWidth:0}}>
-              <div className="kchip-id">KIOSK-01</div>
+              <div className="kchip-id">{activeKiosk.id}</div>
               <div className="kchip-mode">{mode.label} Mode</div>
             </div>
             <span>{mode.emoji}</span>
@@ -412,8 +465,8 @@ function App(){
           {/* Topbar */}
           <header className="topbar">
             <div>
-              <div className="tb-t">{NAV.find(n=>n.id===page)?.label||'Dashboard'}</div>
-              <div className="tb-s">aura_retail_os · {NAV.find(n=>n.id===page)?.sec||''} · Team SoloMid</div>
+              <div className="tb-t">{NAV.find(n=>n.id===page)?.label||'Dashboard'} — <span style={{color:'var(--t3)'}}>{activeKiosk.location}</span></div>
+              <div className="tb-s">{activeKiosk.type} · {NAV.find(n=>n.id===page)?.sec||''} · Team SoloMid</div>
             </div>
             <div className="tb-r">
               {latestEvt&&(
@@ -724,15 +777,24 @@ function DecoratorChain({decActive,decLog,lastMs,strat}){
 // TRANSACTIONS
 // ════════════════════════════════════════════════
 function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
-  const[pid,setPid]=useState('MED001');
+  const[pid,setPid]=useState('');
   const[qty,setQty]=useState(1);
   const[u,setU]=useState('USER001');
   const[rtid,setRtid]=useState('');
   const[ramt,setRamt]=useState('');
-  const[rpid,setRpid]=useState('MED001');
+  const[rpid,setRpid]=useState('');
   const[rqty,setRqty]=useState(1);
-  const[spid,setSpid]=useState('MED001');
+  const[spid,setSpid]=useState('');
   const[sqty,setSqty]=useState(10);
+
+  // Sync selection when inventory loads
+  useEffect(() => {
+    if (inv.length > 0) {
+      if (!inv.find(p => p.id === pid)) setPid(inv[0].id);
+      if (!inv.find(p => p.id === rpid)) setRpid(inv[0].id);
+      if (!inv.find(p => p.id === spid)) setSpid(inv[0].id);
+    }
+  }, [inv]);
 
   const prod=inv.find(p=>p.id===pid);
   const avail=prod?Math.max(0,prod.qty-prod.res-prod.hw):0;

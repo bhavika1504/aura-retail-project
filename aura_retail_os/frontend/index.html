@@ -597,13 +597,13 @@ body {
 .fsel{appearance:none;cursor:pointer;
   background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%237799A8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
   background-repeat:no-repeat;background-position:right 10px center;background-size:14px;padding-right:28px}
-.finfo{padding:8px 11px;background:var(--bg2);border-radius:9px;
-  display:flex;justify-content:space-between;align-items:center;font-size:.7rem;border:1px solid var(--border)}
+.finfo{padding:10px 14px;background:var(--bg2);border-radius:12px;
+  display:flex;justify-content:space-between;align-items:center;font-size:.7rem;border:1px solid var(--border);flex-wrap:wrap;gap:10px}
 .fwarn{padding:8px 11px;background:rgba(107,48,53,.07);border:1px solid rgba(107,48,53,.2);border-radius:9px;font-size:.66rem;color:var(--wine)}
 
 /* ── Buttons ──────────────────────────────────── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  padding:9px 18px;border-radius:10px;border:none;font-size:.78rem;font-weight:700;
+  padding:10px 20px;border-radius:10px;border:none;font-size:.78rem;font-weight:700;
   font-family:var(--font);cursor:pointer;letter-spacing:.3px;transition:all .2s;white-space:nowrap}
 .btn:disabled{opacity:.38;cursor:not-allowed;transform:none!important;filter:grayscale(.5)}
 .btn-pri{background:linear-gradient(135deg,var(--blue-d),var(--wine));color:#fff;box-shadow:0 4px 16px rgba(107,48,53,.2)}
@@ -619,19 +619,19 @@ body {
 
 /* ── Tx list ──────────────────────────────────── */
 .txs{display:flex;flex-direction:column;gap:6px}
-.tx{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--bg);
-  border:1px solid var(--border);border-radius:9px;font-size:.7rem;transition:border-color .2s}
-.tx:hover{border-color:var(--border-b)}
-.txbadge{padding:2px 7px;border-radius:5px;font-family:var(--mono);font-size:.57rem;font-weight:800;
-  letter-spacing:.8px;text-transform:uppercase;min-width:66px;text-align:center}
+.tx{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg);
+  border:1px solid var(--border);border-radius:10px;font-size:.7rem;transition:all .2s}
+.tx:hover{border-color:var(--border-b);background:var(--card)}
+.txbadge{padding:3px 8px;border-radius:6px;font-family:var(--mono);font-size:.57rem;font-weight:800;
+  letter-spacing:.8px;text-transform:uppercase;min-width:72px;text-align:center}
 .b-pur{background:rgba(74,124,89,.12);color:var(--success)}
 .b-ref{background:rgba(107,48,53,.12);color:var(--wine-l)}
 .b-res{background:rgba(155,180,192,.2);color:var(--blue-d)}
 .b-und{background:rgba(139,105,20,.1);color:var(--warn)}
 .tx-info{flex:1;min-width:0}
 .tx-d{font-family:var(--mono);font-size:.67rem;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tx-t{font-size:.6rem;color:var(--t4);margin-top:1px}
-.tx-amt{font-family:var(--mono);font-weight:800;color:var(--success);white-space:nowrap}
+.tx-t{font-size:.6rem;color:var(--t4);margin-top:2px}
+.tx-amt{font-family:var(--mono);font-weight:900;color:var(--success);white-space:nowrap;font-size:.85rem;margin-left:8px}
 
 /* ── Inventory table ──────────────────────────── */
 .itbl{width:100%;border-collapse:collapse;font-size:.73rem}
