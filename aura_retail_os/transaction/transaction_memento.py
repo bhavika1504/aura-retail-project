@@ -55,7 +55,7 @@ class TransactionCaretaker:
 
     def save_memento(self, memento: TransactionMemento) -> None:
         self._mementos[memento.transaction_id] = memento
-        print(f"[Caretaker] 📸 Snapshot saved for transaction '{memento.transaction_id}'")
+        print(f"[Caretaker] [MEMO] Snapshot saved for transaction '{memento.transaction_id}'")
 
     def get_memento(self, transaction_id: str) -> Optional[TransactionMemento]:
         return self._mementos.get(transaction_id)

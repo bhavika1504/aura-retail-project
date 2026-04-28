@@ -29,18 +29,18 @@ class PaymentProcessor(ABC):
 class CardGatewayAPI:
     """Simulates an incompatible credit-card vendor REST API."""
     def make_payment(self, card_token: str, amount_cents: int) -> dict:
-        print(f"[CardGatewayAPI] Charging {amount_cents}¢ via token '{card_token}'")
+        print(f"[CardGatewayAPI] Charging {amount_cents} cents via token '{card_token}'")
         return {"status": "SUCCESS", "ref": f"CRD-{card_token[:4].upper()}"}
 
     def reverse_payment(self, ref: str, amount_cents: int) -> bool:
-        print(f"[CardGatewayAPI] Reversing {amount_cents}¢ for ref '{ref}'")
+        print(f"[CardGatewayAPI] Reversing {amount_cents} cents for ref '{ref}'")
         return True
 
 
 class UPIVendorAPI:
     """Simulates an incompatible UPI payment SDK."""
     def initiate_upi(self, vpa: str, rupees: float) -> str:
-        print(f"[UPIVendorAPI] UPI Rs.{rupees:.2f} → {vpa}")
+        print(f"[UPIVendorAPI] UPI Rs.{rupees:.2f} -> {vpa}")
         return "UPI_SUCCESS"
 
     def initiate_refund(self, upi_ref: str) -> bool:
@@ -51,11 +51,11 @@ class UPIVendorAPI:
 class WalletSDK:
     """Simulates an incompatible digital-wallet mobile SDK."""
     def debit_wallet(self, wallet_id: str, amount: float) -> bool:
-        print(f"[WalletSDK] Debiting ₹{amount:.2f} from wallet '{wallet_id}'")
+        print(f"[WalletSDK] Debiting rs.{amount:.2f} from wallet '{wallet_id}'")
         return True
 
     def credit_wallet(self, wallet_id: str, amount: float) -> bool:
-        print(f"[WalletSDK] Crediting ₹{amount:.2f} to wallet '{wallet_id}'")
+        print(f"[WalletSDK] Crediting rs.{amount:.2f} to wallet '{wallet_id}'")
         return True
 
 

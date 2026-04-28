@@ -58,13 +58,13 @@ class PurchaseCommand(Command):
         # 1. Derived attribute check
         avail = self._inventory.get_available_stock(self._product_id)
         if avail < self._quantity:
-            print(f"[PurchaseCommand] ❌ Insufficient stock for '{self._product_id}' "
+            print(f"[PurchaseCommand] [FAILED] Insufficient stock for '{self._product_id}' "
                   f"(available: {avail}, requested: {self._quantity})")
             return False
 
         # 2. Reserve stock (concurrent safety)
         if not self._inventory.reserve_stock(self._product_id, self._quantity):
-            print(f"[PurchaseCommand] ❌ Reservation failed for '{self._product_id}'")
+            print(f"[PurchaseCommand] [FAILED] Reservation failed for '{self._product_id}'")
             return False
 
         # 3. Compute final price (Strategy)
@@ -88,7 +88,7 @@ class PurchaseCommand(Command):
         if not payment_ok:
             self._inventory.release_reservation(self._product_id, self._quantity)
             self._caretaker.discard_memento(self._transaction_id)
-            print(f"[PurchaseCommand] ❌ Payment failed — transaction {self._transaction_id} aborted.")
+            print(f"[PurchaseCommand] [FAILED] Payment failed -- transaction {self._transaction_id} aborted.")
             return False
 
         # 6. Dispense
@@ -102,15 +102,15 @@ class PurchaseCommand(Command):
                 transaction_id=self._transaction_id,
                 reason="Hardware dispense failure",
             ))
-            print(f"[PurchaseCommand] ❌ Rollback complete for {self._transaction_id}")
+            print(f"[PurchaseCommand] [ROLLBACK] Rollback complete for {self._transaction_id}")
             return False
 
         # 7a. Commit
         self._inventory.commit_transaction(self._product_id, self._quantity)
         self._caretaker.discard_memento(self._transaction_id)
         self._executed = True
-        print(f"[PurchaseCommand] ✅ Transaction {self._transaction_id} complete — "
-              f"₹{self._amount_paid:.2f} charged.")
+        print(f"[PurchaseCommand] [SUCCESS] Transaction {self._transaction_id} complete -- "
+              f"rs.{self._amount_paid:.2f} charged.")
         return True
 
     # ----------------------------------------------------------
@@ -122,12 +122,12 @@ class PurchaseCommand(Command):
         if ok:
             self._inventory.restock(self._product_id, self._quantity)
             self._executed = False
-            print(f"[PurchaseCommand] ↩️  Undo successful for {self._transaction_id}")
+            print(f"[PurchaseCommand] [UNDO] Undo successful for {self._transaction_id}")
         return ok
 
     def get_description(self) -> str:
         return (f"Purchase[{self._transaction_id}]: "
-                f"{self._quantity}× {self._product_id} @ ₹{self._amount_paid:.2f}")
+                f"{self._quantity}x {self._product_id} @ rs.{self._amount_paid:.2f}")
 
 
 # =============================================================
@@ -162,7 +162,7 @@ class RefundCommand(Command):
         if ok:
             self._inventory.restock(self._product_id, self._quantity)
             self._executed = True
-            print(f"[RefundCommand] ✅ Refund ₹{self._amount:.2f} for {self._transaction_id}")
+            print(f"[RefundCommand] [SUCCESS] Refund rs.{self._amount:.2f} for {self._transaction_id}")
         return ok
 
     def undo(self) -> bool:
@@ -174,7 +174,7 @@ class RefundCommand(Command):
         return ok
 
     def get_description(self) -> str:
-        return f"Refund[{self._transaction_id}]: ₹{self._amount:.2f}"
+        return f"Refund[{self._transaction_id}]: rs.{self._amount:.2f}"
 
 
 # =============================================================
@@ -202,7 +202,7 @@ class RestockCommand(Command):
         if p and p.quantity >= self._quantity:
             p.quantity -= self._quantity
             self._executed = False
-            print(f"[RestockCommand] ↩️  Undo restock: -{self._quantity}× {self._product_id}")
+            print(f"[RestockCommand] [UNDO] Undo restock: -{self._quantity}x {self._product_id}")
             return True
         return False
 

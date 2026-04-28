@@ -48,7 +48,7 @@ class KioskModeManager:
         new_name = new_state.get_mode_name()
         self._state = new_state
 
-        print(f"[ModeManager:{self._kiosk_id}] {old_name} → {new_name}")
+        print(f"[ModeManager:{self._kiosk_id}] {old_name} -> {new_name}")
 
         EventBus().publish(ModeChangedEvent(
             source=self._kiosk_id,
@@ -87,7 +87,7 @@ class KioskModeManager:
     def switch_pricing_strategy(self, strategy: PricingStrategy) -> None:
         old = self._pricing.get_name()
         self._pricing = strategy
-        print(f"[ModeManager:{self._kiosk_id}] Pricing: {old} → {strategy.get_name()}")
+        print(f"[ModeManager:{self._kiosk_id}] Pricing: {old} -> {strategy.get_name()}")
 
     def get_pricing_strategy(self) -> PricingStrategy:
         return self._pricing

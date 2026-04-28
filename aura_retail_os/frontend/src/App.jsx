@@ -8,6 +8,9 @@ const{useState,useEffect,useCallback,useRef,useMemo}=React;
 const ts=()=>{const d=new Date();return`${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`};
 const uid=()=>Math.random().toString(36).slice(2,8).toUpperCase();
 
+// ── API Base URL (empty = same origin, used when Flask serves frontend) ──
+const API_BASE = window.AURA_API_BASE || '';
+
 // ── SINGLETON: EventBus ──────────────────────────
 class EventBus{
   static _i=null;_s={};
@@ -192,7 +195,7 @@ function App(){
 
   const fetchKiosks = useCallback(async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/kiosks');
+      const res = await fetch(`${API_BASE}/api/kiosks`);
       if (res.ok) {
         const data = await res.json();
         setKiosks(data);
@@ -202,7 +205,7 @@ function App(){
 
   const switchKiosk = useCallback(async (id) => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/kiosk/select', {
+      const res = await fetch(`${API_BASE}/api/kiosk/select`, {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ id })
       });
@@ -217,7 +220,7 @@ function App(){
   // Fetch logic
   const fetchState = useCallback(async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/state');
+      const res = await fetch(`${API_BASE}/api/state`);
       if (res.ok) {
         const data = await res.json();
         setMode(KSTATES[data.mode] || KSTATES.active);
@@ -230,7 +233,7 @@ function App(){
 
   const fetchInv = useCallback(async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/inventory');
+      const res = await fetch(`${API_BASE}/api/inventory`);
       if (res.ok) {
         const data = await res.json();
         setInv(data);
@@ -339,7 +342,7 @@ function App(){
 
   const modeChange=useCallback(async(next)=>{
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/mode', {
+      const res = await fetch(`${API_BASE}/api/mode`, {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ mode: next.key })
       });
@@ -349,7 +352,7 @@ function App(){
 
   const stratChange = useCallback(async (k) => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/strategy', {
+      const res = await fetch(`${API_BASE}/api/strategy`, {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ strat: k })
       });
@@ -371,7 +374,7 @@ function App(){
     if(type==='purchase'){
        runDecChain('PurchaseCommand','purchase', async () => {
          try {
-           const res = await fetch(`http://127.0.0.1:5000${urlMap[type]}`, {
+           const res = await fetch(`${API_BASE}${urlMap[type]}`, {
              method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
            });
            if (!res.ok) {
@@ -386,7 +389,7 @@ function App(){
        });
     } else {
        try {
-         const res = await fetch(`http://127.0.0.1:5000${urlMap[type]}`, {
+         const res = await fetch(`${API_BASE}${urlMap[type]}`, {
            method: 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data||{})
          });
          if (!res.ok) { 

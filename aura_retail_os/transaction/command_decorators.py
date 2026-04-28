@@ -74,7 +74,7 @@ class LoggingDecorator(CommandDecorator):
 
         result = self._wrapped.execute()
 
-        status = "SUCCESS ✅" if result else "FAILED ❌"
+        status = "[SUCCESS]" if result else "[FAILED]"
         post_msg = f"[LoggingDecorator] POST <- {cmd_name} {status}"
         self._log.append(post_msg)
         print(post_msg)
@@ -150,11 +150,11 @@ class ValidationDecorator(CommandDecorator):
 
         if not ok:
             msg = (
-                f"[ValidationDecorator] PRE-CHECK FAILED — {reason} ❌\n"
+                f"[ValidationDecorator] PRE-CHECK FAILED — {reason} [BLOCK]\n"
                 f"  Command '{self._wrapped.get_description()}' was BLOCKED."
             )
             print(msg)
             return False
 
-        print("[ValidationDecorator] PRE-CHECK passed ✅")
+        print("[ValidationDecorator] PRE-CHECK PASSED")
         return self._wrapped.execute()

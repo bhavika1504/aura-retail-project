@@ -153,7 +153,7 @@ class KioskInterface:
         }
         cls = mode_map.get(mode.lower())
         if cls is None:
-            print(f"[KioskInterface] ❌ Unknown mode '{mode}'. "
+            print(f"[KioskInterface] [ERROR] Unknown mode '{mode}'. "
                   f"Valid: {list(mode_map)}")
             return
         self._kiosk.mode_manager.set_state(cls())

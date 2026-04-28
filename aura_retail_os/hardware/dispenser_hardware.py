@@ -37,10 +37,11 @@ class SpiralDispenser(DispenserHardware):
         if not self._calibrated:
             print("[SpiralDispenser] Cannot dispense — not calibrated.")
             return False
-        if random.random() < self._failure_rate:
-            self._calibrated = False
-            print(f"[SpiralDispenser] Jam detected while dispensing {product_id}.")
-            return False
+        # DISABLED RANDOM FAILURE FOR STABLE DEMO
+        # if random.random() < self._failure_rate:
+        #     self._calibrated = False
+        #     print(f"[SpiralDispenser] Jam detected while dispensing {product_id}.")
+        #     return False
         print(f"[SpiralDispenser] Dispensed {qty} x {product_id}")
         time.sleep(0.05)  
         return True
@@ -67,10 +68,11 @@ class RoboticArmDispenser(DispenserHardware):
         self._operational: bool = True
 
     def dispense(self, product_id: str, qty: int) -> bool:
-        if random.random() < self._failure_rate:
-            self._operational = False
-            print(f"[RoboticArmDispenser] Arm fault — {product_id} not dispensed.")
-            return False
+        # DISABLED RANDOM FAILURE FOR STABLE DEMO
+        # if random.random() < self._failure_rate:
+        #     self._operational = False
+        #     print(f"[RoboticArmDispenser] Arm fault — {product_id} not dispensed.")
+        #     return False
         print(f"[RoboticArmDispenser] Arm dispensed {qty} x {product_id}")
         time.sleep(0.08)
         return True
