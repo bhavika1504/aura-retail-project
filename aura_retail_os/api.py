@@ -81,11 +81,13 @@ def get_state():
         
         txns = []
         for t in history:
-            # Extract amount from description string like "... @ rs.20.00"
+            # Extract amount from description string
+            # Handles: "... @ rs.20.00" (Purchase) or "...: rs.20.00" (Refund)
             amt = 0.0
-            if "@ rs." in t:
+            search_str = "@ rs." if "Purchase" in t else ": rs."
+            if search_str in t:
                 try:
-                    amt = float(t.split("@ rs.")[-1].split()[0])
+                    amt = float(t.split(search_str)[-1].split()[0])
                 except:
                     pass
             

@@ -790,6 +790,26 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
   const[spid,setSpid]=useState('');
   const[sqty,setSqty]=useState(10);
 
+  // Automation: Populate refund fields from history
+  const autoFillRefund = (tid) => {
+    if(!tid) return;
+    const t = txns.find(x => x.desc.includes(`[${tid}]`));
+    if(!t) return;
+    
+    setRtid(tid);
+    setRamt(t.amount || 0);
+
+    // Parse desc "Purchase[ID]: QTYx PID @ rs.AMT"
+    try {
+      const mainPart = t.desc.split(': ')[1];
+      const parts = mainPart.split(' ');
+      const qtyStr = parts[0].replace('x', '');
+      const pid = parts[1];
+      setRpid(pid);
+      setRqty(parseInt(qtyStr) || 1);
+    } catch(e) { console.error("Failed to parse txn for autofill", e); }
+  };
+
   // Sync selection when inventory loads
   useEffect(() => {
     if (inv.length > 0) {
@@ -854,6 +874,16 @@ function TxnPage({mode,inv,strat,txns,mems,doTxn,decLog,decActive,lastMs}){
             <div className="ch"><span className="ct">↩️ Process Refund</span></div>
             <div className="cb">
               <div className="form">
+                <div className="fg">
+                  <label className="flbl">Quick-Fill from History</label>
+                  <select className="finp fsel" value={rtid} onChange={e => autoFillRefund(e.target.value)}>
+                    <option value="">-- Select a Past Purchase --</option>
+                    {txns.filter(t => t.type === 'purchase').map(t => {
+                      const id = t.desc.match(/\[(.*?)\]/)?.[1];
+                      return <option key={t.id} value={id}>{t.desc}</option>
+                    })}
+                  </select>
+                </div>
                 <div className="frow">
                   <div className="fg"><label className="flbl">Transaction ID</label><input type="text" className="finp" placeholder="e.g. AB12CD" value={rtid} onChange={e=>setRtid(e.target.value)}/></div>
                   <div className="fg"><label className="flbl">Amount (₹)</label><input type="number" className="finp" min="0" value={ramt} onChange={e=>setRamt(e.target.value)}/></div>
