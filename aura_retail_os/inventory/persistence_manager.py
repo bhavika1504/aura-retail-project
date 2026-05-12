@@ -18,7 +18,7 @@ class PersistenceManager:
     def save_inventory(self, kiosk_id: str, products: Dict[str, Any]) -> None:
         path = self._path(f"inventory_{kiosk_id}.json")
         data = {pid: p.to_dict() for pid, p in products.items()}
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2)
         print(f"[Persistence] Inventory saved → {path}")
 
@@ -26,7 +26,7 @@ class PersistenceManager:
         path = self._path(f"inventory_{kiosk_id}.json")
         if not os.path.exists(path):
             return {}
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             return json.load(fh)
 
  
@@ -45,7 +45,7 @@ class PersistenceManager:
         path = self._path("transactions.csv")
         if not os.path.exists(path):
             return []
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             return list(csv.DictReader(fh))
 
    
@@ -53,14 +53,14 @@ class PersistenceManager:
     
     def save_config(self, config: Dict[str, Any]) -> None:
         path = self._path("config.json")
-        with open(path, "w") as fh:
+        with open(path, "w", encoding="utf-8") as fh:
             json.dump(config, fh, indent=2)
 
     def load_config(self) -> Dict[str, Any]:
         path = self._path("config.json")
         if not os.path.exists(path):
             return {}
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             return json.load(fh)
 
   
